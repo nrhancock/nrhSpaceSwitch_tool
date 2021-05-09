@@ -1,3 +1,10 @@
+'''
+Nathaniel H.
+04/29/2021
+Quick setup for complex space switching tool
+'''
+
+
 import pymel.core as pm
 
 def phaseOne():
@@ -17,7 +24,7 @@ def phaseOne():
     pm.select('nurbsCircle1','nurbsCircle2','locator1')
 
 phaseOne()
-print 'Raiden Wins'
+print 'Phase One Check'
 
 
 def nrhRename():
@@ -61,6 +68,8 @@ def item2_red():
 
     pm.select('Item_2')   
     
+    pm.addAttr(longName='switcher', k=1, at='enum', enumName='world:oppositeHand')
+    
     item2_color = pm.ls(sl=True)
     
     for n in item2_color:
@@ -80,26 +89,145 @@ pm.select(d = True)
 print 'Colors changed.'
 
 def setSpacez():
-
-    pm.group(n='spaces_grp', world = True)
-    pm.select(d = True)
-    pm.group(n = 'ltHand_space')
-    pm.select(d = True)
-    pm.group(n = 'rtHand_space')
-    pm.select(d = True)
-    pm.group(n = 'worldLocator_space')
-    pm.select(d = True)
     
-    pm.select('ltHand_space', 'rtHand_space','worldLocator_space')
+    nrhSpacegrp = pm.group(n = 'spaces_grp', world = True)
+    pm.select(d = True)
+    nrhLtspace = pm.group(n = 'ltHand_space', world = True)
+    pm.select(d = True)
+    nrhRtspace = pm.group(n = 'rtHand_space', world= True)
+    pm.select(d = True)
+    nrhWorldloc = pm.group(n = 'worldLocator_space', world= True)
+    pm.select(d = True)
+    pm.parent(nrhLtspace, nrhRtspace, nrhWorldloc, nrhSpacegrp)
     
-    popIn = pm.ls(sl = True)
-    
-    pm.parent(popIn, 'spaces_grp')
-    
-    pm.parentConstraint('rtHand_ctrl', 'rtHand_space', mo = False)
-    pm.parentConstraint('ltHand_ctrl', 'ltHand_space', mo = False)
-    pm.parentConstraint('worldLocator', 'worldLocator_space', mo = False)
+    pm.parentConstraint('rtHand_ctrl', nrhRtspace, mo = False)
+    pm.parentConstraint('ltHand_ctrl', nrhLtspace, mo = False)
+    pm.parentConstraint('worldLocator', nrhWorldloc, mo = False)
     
 setSpacez()
 
+def nrhctrlGrps():
+    pm.select('ltHand_ctrl')
+    pm.group(n='lt_ctrlSpace_grp')
+    pm.select('rtHand_ctrl')
+    pm.group(n='rt_ctrlSpace_grp')
+    pm.select(d=True)
+    
+    pm.group(n= 'rtHand_space_ltHand_inbetween', world = True)
+    pm.select(d = True)
+    pm.group(n= 'worldLocator_space_ltHand_inbetween', world = True)
+    pm.parent('rtHand_space_ltHand_inbetween', 'worldLocator_space_ltHand_inbetween', 'ltHand_NULL')
+    pm.select(d=True)
+    
+    pm.group(n= 'ltHand_space_rtHand_inbetween', world = True)
+    pm.select(d = True)
+    pm.group(n= 'worldLocator_space_rtHand_inbetween', world = True)
+    pm.parent('ltHand_space_rtHand_inbetween', 'worldLocator_space_rtHand_inbetween', 'rtHand_NULL')
+    pm.select(d = True)
+    
+    #creating offsets for specific control groups to avoid snap to
+    pm.group(n= 'worldLocator_space_ltHand_offset', world = True)
+    pm.select(d = True)
+    pm.group(n= 'worldLocator_space_rtHand_offset', world = True)
+    pm.parent('worldLocator_space_ltHand_offset', 'worldLocator_space_rtHand_offset', 'worldLocator_space')
+    pm.select(d = True)
+    
+    pm.group(n= 'ltHand_space_rtHand_offset', world = True)
+    pm.parent('ltHand_space_rtHand_offset', 'ltHand_space')
+    pm.select(d = True)
+    
+    pm.group(n= 'rtHand_space_ltHand_offset', world = True)
+    pm.parent('rtHand_space_ltHand_offset', 'rtHand_space')
+    pm.select(d = True)
+
+nrhctrlGrps()
 print "phase 2 complete"
+
+def nrhctrlHookup():
+    pm.parentConstraint('worldLocator_space_ltHand_offset', 'worldLocator_space_ltHand_inbetween', mo = False)
+    pm.parentConstraint('worldLocator_space_rtHand_offset', 'worldLocator_space_rtHand_inbetween', mo = False)
+    pm.parentConstraint('ltHand_space_rtHand_offset', 'ltHand_space_rtHand_inbetween', mo = False)
+    pm.parentConstraint('rtHand_space_ltHand_offset', 'rtHand_space_ltHand_inbetween', mo = False)
+    
+    #contraining inbetweens to the space group
+    pm.parentConstraint('ltHand_space_rtHand_inbetween', 'worldLocator_space_rtHand_inbetween', 'rt_ctrlSpace_grp', mo = False)
+    pm.parentConstraint('rtHand_space_ltHand_inbetween', 'worldLocator_space_ltHand_inbetween', 'lt_ctrlSpace_grp', mo = False)
+    
+    print "it works"
+    
+nrhctrlHookup()
+
+def nrhRightsetup():
+    #creating a condition node for each space
+    pm.shadingNode('condition', asUtility=1, n='rtHand_world_node')
+    pm.shadingNode('condition', asUtility=1, n='rtHand_ltHand_node')
+    
+    #set node attributes to reflect enum
+    pm.setAttr("rtHand_world_node.colorIfTrueR", 1)
+    pm.setAttr("rtHand_world_node.colorIfFalseR", 0)
+    pm.setAttr("rtHand_world_node.colorIfFalseB", 0)
+    pm.setAttr("rtHand_world_node.colorIfTrueG", 0)
+    pm.setAttr("rtHand_world_node.colorIfFalseG", 10)
+    
+    pm.setAttr("rtHand_ltHand_node.colorIfTrueR", 1)
+    pm.setAttr("rtHand_ltHand_node.secondTerm", 1)
+    pm.setAttr("rtHand_ltHand_node.colorIfFalseR", 0)
+    pm.setAttr("rtHand_ltHand_node.colorIfFalseB", 0)
+    pm.setAttr("rtHand_ltHand_node.colorIfTrueG", 0)
+    pm.setAttr("rtHand_ltHand_node.colorIfFalseG", 10)
+    
+    pm.connectAttr('rtHand_world_node.outColorR', 'rt_ctrlSpace_grp_parentConstraint1.worldLocator_space_rtHand_inbetweenW1', f=1)
+    pm.connectAttr('rtHand_ltHand_node.outColorR', 'rt_ctrlSpace_grp_parentConstraint1.ltHand_space_rtHand_inbetweenW0', f=1)
+    pm.connectAttr('rtHand_world_node.outColorG', 'worldLocator_space_rtHand_inbetween.nodeState', f=1)
+    pm.connectAttr('rtHand_ltHand_node.outColorG', 'ltHand_space_rtHand_inbetween.nodeState', f=1)
+    pm.connectAttr('rtHand_ctrl.switcher', 'rtHand_world_node.firstTerm', f=1)
+    pm.connectAttr('rtHand_ctrl.switcher', 'rtHand_ltHand_node.firstTerm', f=1)
+    
+    
+     
+def nrhLeftsetup():
+    #Reapeating mirror of previous function for the left side
+    pm.shadingNode('condition', asUtility=1, n='ltHand_world_node')
+    pm.shadingNode('condition', asUtility=1, n='ltHand_rtHand_node')
+    
+    
+    pm.setAttr("ltHand_world_node.colorIfTrueR", 1)
+    pm.setAttr("ltHand_world_node.colorIfFalseR", 0)
+    pm.setAttr("ltHand_world_node.colorIfFalseB", 0)
+    pm.setAttr("ltHand_world_node.colorIfTrueG", 0)
+    pm.setAttr("ltHand_world_node.colorIfFalseG", 10)
+    
+    pm.setAttr("ltHand_rtHand_node.colorIfTrueR", 1)
+    pm.setAttr("ltHand_rtHand_node.secondTerm", 1)
+    pm.setAttr("ltHand_rtHand_node.colorIfFalseR", 0)
+    pm.setAttr("ltHand_rtHand_node.colorIfFalseB", 0)
+    pm.setAttr("ltHand_rtHand_node.colorIfTrueG", 0)
+    pm.setAttr("ltHand_rtHand_node.colorIfFalseG", 10)
+    
+    pm.connectAttr('ltHand_world_node.outColorR', 'lt_ctrlSpace_grp_parentConstraint1.worldLocator_space_ltHand_inbetweenW1', f=1)
+    pm.connectAttr('ltHand_rtHand_node.outColorR', 'lt_ctrlSpace_grp_parentConstraint1.rtHand_space_ltHand_inbetweenW0', f=1)
+    pm.connectAttr('ltHand_world_node.outColorG', 'worldLocator_space_ltHand_inbetween.nodeState', f=1)
+    pm.connectAttr('ltHand_rtHand_node.outColorG', 'rtHand_space_ltHand_inbetween.nodeState', f=1)
+    pm.connectAttr('ltHand_ctrl.switcher', 'ltHand_world_node.firstTerm', f=1)
+    pm.connectAttr('ltHand_ctrl.switcher', 'ltHand_rtHand_node.firstTerm', f=1)
+
+nrhRightsetup()
+print "Right Hand Completed"
+nrhLeftsetup()
+print "Left Hand Completed"
+
+def nrhCleanitup():
+    
+    pm.select('rtHand_ctrl')
+    pm.move(-6, 0, 0, r=1, os=1, wd=1)
+    pm.select('ltHand_ctrl')
+    pm.move(6, 0, 0, r=1, os=1, wd=1)
+    
+    print "Object's Cleaned"
+
+nrhCleanitup()
+
+pm.select('ltHand_ctrl', 'rtHand_ctrl')
+coffeeBreak()
+
+print 'Operation Complete'
